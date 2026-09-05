@@ -4,6 +4,8 @@ from PySide6.QtGui import QKeyEvent
 from PySide6.QtMultimedia import QMediaPlayer
 from file_system_manager import AudioFilterModel, is_supported_audio
 from audio_player import AudioPlayer, QMediaPlayer
+from waveform_widget import WaveformWidget
+from waveform_generator import WaveformGenerator
 from pathlib import Path
 
 class AudioTreeView(QTreeView):
@@ -117,14 +119,15 @@ class MainWindow(QMainWindow):
         self.current_index = None
 
         self.audio_player = AudioPlayer()
+        self.waveform_generator = WaveformGenerator()
 
         self.create_ui()
 
         self.audio_player.player.playbackStateChanged.connect(self.playback_state_changed)
         self.audio_player.player.positionChanged.connect(self.position_changed)
         self.audio_player.player.durationChanged.connect(self.duration_changed)
-        self.progress_slider.sliderMoved.connect(self.seek_audio)
         self.audio_player.player.mediaStatusChanged.connect(self.media_status_changed)
+        self.waveform_generator.waveform_ready.connect(self.waveform_ready)
 
     def playback_state_changed(self, state):
         if state == QMediaPlayer.PlaybackState.PlayingState:
@@ -164,19 +167,28 @@ class MainWindow(QMainWindow):
             self.current_file = file_path
             self.file_name.setText(path.name)
             self.time_label.setText("00:00 / 00:00")
+            self.waveform_widget.set_waveform([])
+            self.waveform_widget.set_playback_position(0, 0)
             self.audio_player.play_file(file_path)
+            self.waveform_generator.generate(file_path)
         else:
             self.current_file = None
             self.file_name.setText("No file selected")
 
     # Makes the progress slider advance with the audio
     def position_changed(self, position):
-        self.progress_slider.setValue(position)
+        if not self.progress_slider.isSliderDown():
+            self.progress_slider.setValue(position)
 
         duration = self.audio_player.player.duration()
 
         self.time_label.setText(
             f"{self.format_time(position)} / {self.format_time(duration)}"
+        )
+
+        self.waveform_widget.set_playback_position(
+            position,
+            duration
         )
 
     # Matches the length of the slider to the audio
@@ -190,7 +202,8 @@ class MainWindow(QMainWindow):
                 )
 
     def seek_audio(self, position):
-        self.audio_player.player.seek(position)
+        self.audio_player.seek(position)
+        self.file_tree.setFocus()
 
     def media_status_changed(self, status):
         if status == QMediaPlayer.MediaStatus.EndOfMedia:
@@ -203,6 +216,9 @@ class MainWindow(QMainWindow):
         seconds = total_seconds % 60
 
         return f"{minutes:02}:{seconds:02}"
+
+    def waveform_ready(self, waveform):
+        self.waveform_widget.set_waveform(waveform)
     
 
     def create_ui(self):
@@ -284,10 +300,11 @@ class MainWindow(QMainWindow):
         view_section.setLayout(view_section_layout)
             # adds placeholder text to the view section
         self.file_name = QLabel("No file selected")
-        file_waveform = QLabel("Waveform Display Placeholder")  #placeholder for the waveform
+        self.waveform_widget = WaveformWidget()
+        self.waveform_widget.seek_requested.connect(self.seek_audio)
 
         view_section_layout.addWidget(self.file_name,  alignment=Qt.AlignCenter)
-        view_section_layout.addWidget(file_waveform, alignment=Qt.AlignCenter)
+        view_section_layout.addWidget(self.waveform_widget, alignment=Qt.AlignCenter)
 
 
         # play section layout
@@ -303,6 +320,7 @@ class MainWindow(QMainWindow):
         next_button.clicked.connect(self.file_tree.move_next)
         self.progress_slider = QSlider(Qt.Horizontal)
         self.progress_slider.setRange(0, 0)
+        self.progress_slider.sliderReleased.connect(lambda: self.seek_audio(self.progress_slider.value()))
         self.time_label = QLabel("00:00 / 00:00")
 
         play_section_layout.addWidget(previous_button)
