@@ -1,5 +1,5 @@
 from PySide6.QtWidgets import QWidget
-from PySide6.QtGui import QPainter, QMouseEvent
+from PySide6.QtGui import QColor, QPainter, QPen
 from PySide6.QtCore import Qt, Signal
 
 
@@ -40,12 +40,18 @@ class WaveformWidget(QWidget):
         try:
             painter.setRenderHint(QPainter.Antialiasing)
 
+            waveform_pen = QPen(Qt.lightGray)
+            waveform_pen.setWidth(2)
+            position_pen = QPen(QColor("#00ffa2"))
+
             if not self.waveform:
                 return
 
             center_y = self.height() / 2
             half_height = self.height() / 2
             width = self.width()
+
+            painter.setPen(waveform_pen)
 
             for x in range(width):
                 waveform_index = int(
@@ -68,6 +74,8 @@ class WaveformWidget(QWidget):
                 position_x = (
                     self.playback_position / self.duration
                 ) * width
+
+                painter.setPen(position_pen)
 
                 painter.drawLine(
                     int(position_x),
