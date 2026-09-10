@@ -40,9 +40,9 @@ class WaveformWidget(QWidget):
         try:
             painter.setRenderHint(QPainter.Antialiasing)
 
-            waveform_pen = QPen(Qt.lightGray)
+            waveform_pen = QPen(QColor("#696969"))
             waveform_pen.setWidth(2)
-            position_pen = QPen(QColor("#00ffa2"))
+            position_pen = QPen(QColor("#7ebcc4"))
 
             if not self.waveform:
                 return

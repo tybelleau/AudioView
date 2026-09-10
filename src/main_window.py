@@ -1,6 +1,6 @@
 from PySide6.QtWidgets import QHBoxLayout, QLabel, QTreeView, QMainWindow, QSlider, QVBoxLayout, QWidget, QPushButton, QFileDialog, QFileSystemModel
 from PySide6.QtCore import Qt, QDir, Signal, QSize
-from PySide6.QtGui import QKeyEvent, QIcon
+from PySide6.QtGui import QKeyEvent, QIcon, QPixmap, QTransform
 from PySide6.QtMultimedia import QMediaPlayer
 from file_system_manager import AudioFilterModel, is_supported_audio, AudioFileSystemModel
 from audio_player import AudioPlayer
@@ -151,8 +151,8 @@ class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
 
-        self.setWindowTitle("AudioView")
-        self.resize(900, 700)
+        self.setWindowTitle("WaveMap")
+        self.resize(900, 600)
 
         self.current_root_folder = None
         self.current_file = None
@@ -252,8 +252,7 @@ class MainWindow(QMainWindow):
         self.file_tree.setFocus()
 
     def media_status_changed(self, status):
-        if status == QMediaPlayer.MediaStatus.EndOfMedia:
-            self.progress_slider.setValue(0)
+        print("Media status:", status)
 
     def format_time(self, milliseconds):
         total_seconds = milliseconds // 1000
@@ -281,6 +280,7 @@ class MainWindow(QMainWindow):
         central_widget.setLayout(central_widget_layout)
             # Adds both widgets to the horizontal layout
         file_section = QWidget()
+        file_section.setObjectName("file_section")
         view_play_section = QWidget()
 
         central_widget_layout.addWidget(file_section, 1)
@@ -294,6 +294,7 @@ class MainWindow(QMainWindow):
             # adds widgets and text to the file section layout
         explorer_header = QWidget()
         self.folder_header = QLabel("Current folder: No folder selected")
+        self.folder_header.setObjectName("folder_header")
         self.file_tree = AudioTreeView()
         self.file_tree.space_pressed.connect(self.space_pressed)
 
@@ -314,7 +315,7 @@ class MainWindow(QMainWindow):
         )
 
         file_section_layout.addWidget(explorer_header)
-        file_section_layout.addWidget(self.folder_header, alignment=Qt.AlignCenter)
+        file_section_layout.addWidget(self.folder_header)
         file_section_layout.addWidget(self.file_tree)
 
 

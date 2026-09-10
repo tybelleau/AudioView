@@ -20,7 +20,7 @@ QFontDatabase.addApplicationFont(
 
 app.setFont(QFont("Sora", 9))
 palette = app.palette()
-palette.setColor(QPalette.Accent, QColor("#00ffa2"))
+palette.setColor(QPalette.Accent, QColor("#7ebcc4"))
 app.setPalette(palette)
 
 app.setStyleSheet(STYLESHEET)

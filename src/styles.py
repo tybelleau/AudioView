@@ -1,8 +1,20 @@
 
 STYLESHEET = """
+QWidget#central_widget {
+    background-color: #1b1b1b;
+}
+
+QWidget#file_section {
+    background-color: #2B2B2B;
+    border-radius: 4px;
+}
+
+QLabel#folder_header {
+    padding-left: 6px;
+}
 
 QTreeView {
-    background-color: rgba(255, 255, 255, 0.04);
+    background-color: rgba(255, 255, 255, 0.00);
     border: 0px solid;
     border-radius: 4px;
     padding: 4px;
@@ -42,12 +54,12 @@ QSlider#progress_slider {
 
 QSlider#progress_slider::groove:horizontal {
     height: 3px;
-    background: #555555;
+    background: #2B2B2B;
     border-radius: 1px;
 }
 
 QSlider#progress_slider::sub-page:horizontal {
-    background: #00ffa2;
+    background: #7ebcc4;
     border-radius: 2px;
 }
 
