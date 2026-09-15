@@ -1,3 +1,9 @@
+# colors:
+# blue accent: #7ebcc4
+# background: #1b1b1b
+# accent grey: #2B2B2B
+# highlight grey: #3C3C3C
+# alt text: #939393
 
 STYLESHEET = """
 QWidget#central_widget {
@@ -13,8 +19,28 @@ QLabel#folder_header {
     padding-left: 6px;
 }
 
+QPushButton#choose_folder_button {
+    background-color: transparent;
+}
+
+QPushButton#choose_folder_button:hover {
+    background-color: #3C3C3C;
+}
+
+QPushButton#choose_folder_button:pressed {
+    background-color: transparent;
+}
+
+QWidget#search_bar_container {
+    padding: 0px;
+}
+
+QLineEdit#search_bar {
+    padding: 2px;
+}
+
 QTreeView {
-    background-color: rgba(255, 255, 255, 0.00);
+    background: transparent;
     border: 0px solid;
     border-radius: 4px;
     padding: 4px;
@@ -24,7 +50,7 @@ QTreeView {
 }
 
 QTreeView::item {
-    padding: 2px;
+    padding: 3px, 4px;
 }
 
 QTreeView::item:hover {
@@ -34,7 +60,26 @@ QTreeView::item:hover {
 QTreeView::item:selected {
     background-color: rgba(255, 255, 255, 0.10);
     color: white;
+    border-radius: 4px;
 }
+
+
+QPushButton#tool_buttons {
+    background-color: transparent;
+}
+
+QPushButton#tool_buttons:hover {
+    background-color: #3C3C3C;
+}
+
+QPushButton#tool_buttons:pressed {
+    background-color: transparent;
+}
+
+QPushButton#tool_buttons:checked {
+    background-color: #7ebcc4;
+}
+
 
 QPushButton#progress_buttons {
     background: transparent;
@@ -46,6 +91,14 @@ QPushButton#progress_buttons:hover {
 }
 
 QPushButton#progress_buttons:pressed {
+}
+
+QPushButton:disabled {
+    color: rgba(255, 255, 255, 0.25);
+}
+
+QSlider:disabled {
+    opacity: 0.5;
 }
 
 QSlider#progress_slider {

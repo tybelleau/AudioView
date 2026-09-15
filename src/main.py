@@ -1,14 +1,12 @@
 import sys
 from PySide6.QtWidgets import QApplication
-from PySide6.QtGui import QPalette, QColor, QFontDatabase, QFont
+from PySide6.QtGui import QIcon, QPalette, QColor, QFontDatabase, QFont
 from pathlib import Path
 from main_window import MainWindow
 from styles import STYLESHEET
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 FONT_DIR = BASE_DIR / "assets" / "fonts" / "Sora" / "static"
-
-
 
 
 # Creates the application instance
@@ -22,6 +20,7 @@ app.setFont(QFont("Sora", 9))
 palette = app.palette()
 palette.setColor(QPalette.Accent, QColor("#7ebcc4"))
 app.setPalette(palette)
+app.setWindowIcon(QIcon(str(BASE_DIR / "assets" / "icons" / "wavemap_logo.ico")))
 
 app.setStyleSheet(STYLESHEET)
 
