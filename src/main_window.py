@@ -8,28 +8,11 @@ from waveform_widget import WaveformWidget
 from waveform_generator import WaveformGenerator
 from pathlib import Path
 
+# Keyboard navigation
 class AudioTreeView(QTreeView):
     space_pressed = Signal(object)
 
     def keyPressEvent(self, event):
-        if event.modifiers() & Qt.ControlModifier:
-            current_index = self.currentIndex()
-
-            if event.key() == Qt.Key_Up:
-                previous_folder = self.find_previous_folder(current_index)
-
-                if previous_folder is not None:
-                    self.setCurrentIndex(previous_folder)
-
-                return
-
-            if event.key() == Qt.Key_Down:
-                next_folder = self.find_next_folder(current_index)
-
-                if next_folder is not None:
-                    self.setCurrentIndex(next_folder)
-
-                return
 
         if event.key() == Qt.Key_Space:
             current_index = self.currentIndex()
@@ -49,34 +32,6 @@ class AudioTreeView(QTreeView):
             return
 
         super().keyPressEvent(event)
-
-    def find_next_folder(self, index):
-        next_index = self.indexBelow(index)
-
-        while next_index.isValid():
-            source_index = self.model().mapToSource(next_index)
-            source_model = self.model().sourceModel()
-
-            if source_model.isDir(source_index):
-                return next_index
-
-            next_index = self.indexBelow(next_index)
-
-        return None
-
-    def find_previous_folder(self, index):
-        previous_index = self.indexAbove(index)
-
-        while previous_index.isValid():
-            source_index = self.model().mapToSource(previous_index)
-            source_model = self.model().sourceModel()
-
-            if source_model.isDir(source_index):
-                return previous_index
-
-            previous_index = self.indexAbove(previous_index)
-
-        return None
 
     def move_next(self):
         current_index = self.currentIndex()
@@ -270,7 +225,6 @@ class MainWindow(QMainWindow):
 
     def waveform_ready(self, waveform):
         self.waveform_widget.set_waveform(waveform)
-    
 
     def create_ui(self):
 
@@ -352,6 +306,7 @@ class MainWindow(QMainWindow):
         explorer_header_layout.addWidget(explorer_title, alignment=Qt.AlignLeft)
         explorer_header_layout.addWidget(choose_folder_button, alignment=Qt.AlignRight)
 
+
         # view & play section layout
         view_play_section_layout = QVBoxLayout()
         view_play_section.setLayout(view_play_section_layout)
@@ -363,6 +318,7 @@ class MainWindow(QMainWindow):
         view_play_section_layout.addWidget(tool_section, 1)
         view_play_section_layout.addWidget(view_section, 9, alignment=Qt.AlignCenter)
         view_play_section_layout.addWidget(play_section, 1)
+
 
         # tool section layout
         tool_section_layout = QHBoxLayout()
@@ -382,6 +338,7 @@ class MainWindow(QMainWindow):
         tool_section_layout.addWidget(self.metadata_button, 1)
         tool_section_layout.addWidget(self.loop_button, 1)
         tool_section_layout.addWidget(self.options_button, 1)
+
 
         # view section Layout
         view_section_layout = QVBoxLayout()
