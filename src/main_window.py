@@ -1,9 +1,9 @@
-from PySide6.QtWidgets import QHBoxLayout, QLabel, QTreeView, QMainWindow, QSlider, QVBoxLayout, QWidget, QPushButton, QFileDialog, QFileSystemModel
-from PySide6.QtCore import Qt, QDir, Signal
-from PySide6.QtGui import QKeyEvent
+from PySide6.QtWidgets import QHBoxLayout, QLabel, QLineEdit, QTreeView, QMainWindow, QSlider, QVBoxLayout, QWidget, QPushButton, QFileDialog
+from PySide6.QtCore import Qt, QDir, Signal, QSize
+from PySide6.QtGui import QIcon
 from PySide6.QtMultimedia import QMediaPlayer
-from file_system_manager import AudioFilterModel, is_supported_audio
-from audio_player import AudioPlayer, QMediaPlayer
+from file_system_manager import AudioFilterModel, is_supported_audio, AudioFileSystemModel
+from audio_player import AudioPlayer
 from waveform_widget import WaveformWidget
 from waveform_generator import WaveformGenerator
 from pathlib import Path
@@ -107,12 +107,52 @@ class AudioTreeView(QTreeView):
             previous_index = self.indexAbove(previous_index)
 
 
+# makes the buttons for play, pause, next, and previous change size on hover and click
+class ProgressButtons(QPushButton):
+    def __init__(self, icon_path, parent=None):
+        super().__init__(parent)
+
+        self.normal_size = QSize(24, 24)
+        self.hover_size = QSize(29, 29)
+
+        self.setIcon(QIcon(str(icon_path)))
+        self.setIconSize(self.normal_size)
+
+        self.setFixedSize(40, 40)
+
+        self.setStyleSheet("""
+            QPushButton {
+                background: transparent;
+                border: none;
+                padding: 0px;
+            }
+
+            QPushButton:hover {
+                background: transparent;
+                border: none;
+            }
+
+            QPushButton:pressed {
+                background: transparent;
+                border: none;
+            }
+        """)
+
+    def enterEvent(self, event):
+        self.setIconSize(self.hover_size)
+        super().enterEvent(event)
+
+    def leaveEvent(self, event):
+        self.setIconSize(self.normal_size)
+        super().leaveEvent(event)
+
+
 class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
 
-        self.setWindowTitle("AudioView")
-        self.resize(900, 700)
+        self.setWindowTitle("WaveMap")
+        self.resize(900, 600)
 
         self.current_root_folder = None
         self.current_file = None
@@ -131,13 +171,19 @@ class MainWindow(QMainWindow):
 
     def playback_state_changed(self, state):
         if state == QMediaPlayer.PlaybackState.PlayingState:
-            self.play_button.setText("Pause")
+            self.play_button.setIcon(
+                QIcon(str(self.icons_path / "pause_icon.svg"))
+            )
 
         elif state == QMediaPlayer.PlaybackState.PausedState:
-            self.play_button.setText("Play")
+            self.play_button.setIcon(
+                QIcon(str(self.icons_path / "play_icon.svg"))
+            )
 
         elif state == QMediaPlayer.PlaybackState.StoppedState:
-            self.play_button.setText("Play")
+            self.play_button.setIcon(
+                QIcon(str(self.icons_path / "play_icon.svg"))
+            )
 
     def space_pressed(self, index):
         if self.current_file is not None:
@@ -153,7 +199,13 @@ class MainWindow(QMainWindow):
             source_index = self.file_model.setRootPath(folder)
             proxy_index = self.audio_filter_model.mapFromSource(source_index)
             self.file_tree.setRootIndex(proxy_index)
-            self.folder_header.setText(f"Current Folder: {Path(folder).name}")
+            self.folder_header.setText(f"{Path(folder).name}")
+            self.folder_header.setStyleSheet("""
+                QLabel#folder_header {
+                    color: #939393;
+                    padding-left: 6px;
+                }
+            """)
 
     def file_selected(self, current_index, previous_index):
         self.current_index = current_index
@@ -206,8 +258,7 @@ class MainWindow(QMainWindow):
         self.file_tree.setFocus()
 
     def media_status_changed(self, status):
-        if status == QMediaPlayer.MediaStatus.EndOfMedia:
-            self.progress_slider.setValue(0)
+        print("Media status:", status)
 
     def format_time(self, milliseconds):
         total_seconds = milliseconds // 1000
@@ -223,15 +274,17 @@ class MainWindow(QMainWindow):
 
     def create_ui(self):
 
+        self.icons_path = Path(__file__).resolve().parent.parent / "assets" / "icons"
+
         # central widget and layout
         central_widget = QWidget()
+        central_widget.setObjectName("central_widget")
         self.setCentralWidget(central_widget)
-
-            # Horizontal layout for the central widget
         central_widget_layout = QHBoxLayout()
         central_widget.setLayout(central_widget_layout)
-            # Adds both widgets to the horizontal layout
+
         file_section = QWidget()
+        file_section.setObjectName("file_section")
         view_play_section = QWidget()
 
         central_widget_layout.addWidget(file_section, 1)
@@ -239,20 +292,25 @@ class MainWindow(QMainWindow):
 
 
         # file section layout
-            # sets the vertical layout for the file section
         file_section_layout = QVBoxLayout()
+        file_section_layout.setContentsMargins(5, 5, 5, 5)
+        file_section_layout.setSpacing(0)
         file_section.setLayout(file_section_layout)
-            # adds widgets and text to the file section layout
+
         explorer_header = QWidget()
-        self.folder_header = QLabel("Current folder: No folder selected")
+        self.folder_header = QLabel("Base folder: No folder selected")
+        self.folder_header.setObjectName("folder_header")
+        search_bar_container = QWidget()
+        search_bar_container.setObjectName("search_bar_container")
         self.file_tree = AudioTreeView()
         self.file_tree.space_pressed.connect(self.space_pressed)
 
-        self.file_model = QFileSystemModel()
+        self.file_model = AudioFileSystemModel()
         self.audio_filter_model = AudioFilterModel()
         self.audio_filter_model.setSourceModel(self.file_model)
         self.file_model.setRootPath("")
         self.file_tree.setModel(self.audio_filter_model)
+        self.file_tree.header().hide()
         self.file_tree.setColumnHidden(1, True)
         self.file_tree.setColumnHidden(2, True)
         self.file_tree.setColumnHidden(3, True)
@@ -265,40 +323,70 @@ class MainWindow(QMainWindow):
         )
 
         file_section_layout.addWidget(explorer_header)
-        file_section_layout.addWidget(self.folder_header, alignment=Qt.AlignCenter)
+        file_section_layout.addSpacing(25)
+        file_section_layout.addWidget(self.folder_header)
+        file_section_layout.addWidget(search_bar_container)
         file_section_layout.addWidget(self.file_tree)
 
 
+        # search bar container layout
+        search_bar_container_layout = QVBoxLayout()
+        search_bar_container.setLayout(search_bar_container_layout)
+
+        self.search_bar = QLineEdit()
+        self.search_bar.setPlaceholderText("Search...")
+        self.search_bar.setObjectName("search_bar")
+
+        search_bar_container_layout.addWidget(self.search_bar)
+
+
         # file section header layout
-            # sets the horizontal layout for the file section header
         explorer_header_layout = QHBoxLayout()
         explorer_header.setLayout(explorer_header_layout)
-            # adds label and button to header layout
-        explorer_title = QLabel("Explorer")
-        choose_folder_button = QPushButton("Choose Folder")
 
+        explorer_title = QLabel("Audio Explorer")
+        choose_folder_button = QPushButton("Choose Folder")
+        choose_folder_button.setObjectName("choose_folder_button")
         choose_folder_button.clicked.connect(self.choose_folder)
 
         explorer_header_layout.addWidget(explorer_title, alignment=Qt.AlignLeft)
         explorer_header_layout.addWidget(choose_folder_button, alignment=Qt.AlignRight)
 
         # view & play section layout
-            # sets the vertical layout for view & play section
         view_play_section_layout = QVBoxLayout()
         view_play_section.setLayout(view_play_section_layout)
-            # adds widgets to the vertical layout
+
         play_section = QWidget()
         view_section = QWidget()
+        tool_section = QWidget()
 
+        view_play_section_layout.addWidget(tool_section, 1)
         view_play_section_layout.addWidget(view_section, 9, alignment=Qt.AlignCenter)
         view_play_section_layout.addWidget(play_section, 1)
 
+        # tool section layout
+        tool_section_layout = QHBoxLayout()
+        tool_section.setLayout(tool_section_layout)
+
+        empty_space = QWidget()
+        self.metadata_button = QPushButton("Metadata")
+        self.metadata_button.setObjectName("tool_buttons")
+        self.metadata_button.setCheckable(True)
+        self.loop_button = QPushButton("Loop")
+        self.loop_button.setObjectName("tool_buttons")
+        self.loop_button.setCheckable(True)
+        self.options_button = QPushButton("Options")
+        self.options_button.setObjectName("tool_buttons")
+
+        tool_section_layout.addWidget(empty_space, 8)
+        tool_section_layout.addWidget(self.metadata_button, 1)
+        tool_section_layout.addWidget(self.loop_button, 1)
+        tool_section_layout.addWidget(self.options_button, 1)
 
         # view section Layout
-            # sets the vertical layout for the view section
         view_section_layout = QVBoxLayout()
         view_section.setLayout(view_section_layout)
-            # adds placeholder text to the view section
+
         self.file_name = QLabel("No file selected")
         self.waveform_widget = WaveformWidget()
         self.waveform_widget.seek_requested.connect(self.seek_audio)
@@ -308,17 +396,32 @@ class MainWindow(QMainWindow):
 
 
         # play section layout
-            # sets the horizontal layout for the play section
         play_section_layout = QHBoxLayout()
+        play_section_layout.setSpacing(0)
         play_section.setLayout(play_section_layout)
-            # adds action buttons to play section layout
-        previous_button = QPushButton("Previous")
+
+        icons_path = self.icons_path
+
+        previous_button = ProgressButtons(
+            icons_path / "previous_icon.svg"
+        )
+        previous_button.setObjectName("progress_buttons")
         previous_button.clicked.connect(self.file_tree.move_previous)
-        self.play_button = QPushButton("Play")
+
+        self.play_button = ProgressButtons(
+            icons_path / "play_icon.svg"
+        )
+        self.play_button.setObjectName("progress_buttons")
         self.play_button.clicked.connect(self.audio_player.toggle_playback)
-        next_button = QPushButton("Next")
+
+        next_button = ProgressButtons(
+            icons_path / "next_icon.svg"
+        )
+        next_button.setObjectName("progress_buttons")
         next_button.clicked.connect(self.file_tree.move_next)
+
         self.progress_slider = QSlider(Qt.Horizontal)
+        self.progress_slider.setObjectName("progress_slider")
         self.progress_slider.setRange(0, 0)
         self.progress_slider.sliderReleased.connect(lambda: self.seek_audio(self.progress_slider.value()))
         self.time_label = QLabel("00:00 / 00:00")
@@ -326,5 +429,7 @@ class MainWindow(QMainWindow):
         play_section_layout.addWidget(previous_button)
         play_section_layout.addWidget(self.play_button)
         play_section_layout.addWidget(next_button)
+        play_section_layout.addSpacing(15)
         play_section_layout.addWidget(self.progress_slider)
+        play_section_layout.addSpacing(15)
         play_section_layout.addWidget(self.time_label)

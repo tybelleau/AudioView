@@ -1,5 +1,7 @@
 from pathlib import Path
-from PySide6.QtCore import QSortFilterProxyModel
+from PySide6.QtCore import QSortFilterProxyModel, Qt
+from PySide6.QtGui import QIcon
+from PySide6.QtWidgets import QFileSystemModel
 
 SUPPORTED_EXTENSIONS = {
     ".wav",
@@ -29,6 +31,27 @@ def get_audio_files(folder_path):
             audio_files.append(path)
 
     return sorted(audio_files)
+
+class AudioFileSystemModel(QFileSystemModel):
+    def __init__(self):
+        super().__init__()
+
+        icons_path = Path(__file__).resolve().parent.parent / "assets" / "icons"
+
+        self.folder_icon = QIcon(str(icons_path / "folder_icon.svg"))
+        self.audio_icon = QIcon(str(icons_path / "audio_icon.svg"))
+
+    def data(self, index, role=Qt.DisplayRole):
+        if role == Qt.DecorationRole:
+            path = Path(self.filePath(index))
+
+            if path.is_dir():
+                return self.folder_icon
+
+            if is_supported_audio(path):
+                return self.audio_icon
+
+        return super().data(index, role)
 
 class AudioFilterModel(QSortFilterProxyModel):
     def filterAcceptsRow(self, source_row, source_parent):
