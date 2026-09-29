@@ -20,7 +20,7 @@ app.setFont(QFont("Sora", 9))
 palette = app.palette()
 palette.setColor(QPalette.Accent, QColor("#7ebcc4"))
 app.setPalette(palette)
-app.setWindowIcon(QIcon(str(BASE_DIR / "assets" / "icons" / "wavemap_logo.ico")))
+app.setWindowIcon(QIcon(str(BASE_DIR / "assets" / "icons" / "audio_icon.svg")))
 
 app.setStyleSheet(STYLESHEET)
 

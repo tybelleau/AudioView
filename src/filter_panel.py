@@ -1,15 +1,53 @@
-from PySide6.QtCore import Qt, Signal
+from PySide6.QtCore import Qt, Signal, QSize
 from PySide6.QtWidgets import QFrame, QVBoxLayout, QHBoxLayout, QLabel, QCheckBox, QPushButton
+from PySide6.QtGui import QIcon
 
 class FilterButton(QPushButton):
-    def __init__(self, parent=None):
+    def __init__(self, icon_path, parent=None):
         super().__init__(parent)
 
+        # Icon
+        self.normal_size = QSize(20, 20)
+        self.hover_size = QSize(23, 23)
+
+        self.setIcon(QIcon(str(icon_path)))
+        self.setIconSize(self.normal_size)
+
+        self.setFixedSize(32, 32)
+
+        # Button styling
+        self.setStyleSheet("""
+            QPushButton {
+                background: transparent;
+                border: none;
+                padding: 0px;
+            }
+
+            QPushButton:hover {
+                background: transparent;
+                border: none;
+            }
+
+            QPushButton:pressed {
+                background: transparent;
+                border: none;
+            }
+        """)
+
+        # Filter count badge
         self.badge = QLabel(self)
         self.badge.setAlignment(Qt.AlignCenter)
         self.badge.hide()
 
         self.update_badge_position()
+
+    def enterEvent(self, event):
+        self.setIconSize(self.hover_size)
+        super().enterEvent(event)
+
+    def leaveEvent(self, event):
+        self.setIconSize(self.normal_size)
+        super().leaveEvent(event)
 
     def set_filter_count(self, count):
         if count <= 0:
