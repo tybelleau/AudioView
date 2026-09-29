@@ -121,8 +121,8 @@ class AudioTreeView(QTreeView):
             previous_index = self.indexAbove(previous_index)
 
 
-# makes the buttons for play, pause, next, and previous change size on hover and click
-class ProgressButtons(QPushButton):
+# Generic icon button with hover scaling
+class IconButtons(QPushButton):
     def __init__(self, icon_path, parent=None):
         super().__init__(parent)
 
@@ -549,8 +549,9 @@ class MainWindow(QMainWindow):
         self.search_bar.setObjectName("search_bar")
         self.search_bar.setEditable(True)
         self.search_bar.setInsertPolicy(QComboBox.NoInsert)
-        self.filter_button = FilterButton()
-        self.filter_button.setText("☷")
+        self.filter_button = FilterButton(
+            self.icons_path / "filter_icon.svg"
+        )
         self.filter_button.setObjectName("filter_button")
         self.filter_button.setFixedWidth(32)
         self.filter_button.clicked.connect(self.show_filter_panel)
@@ -628,19 +629,19 @@ class MainWindow(QMainWindow):
 
         icons_path = self.icons_path
 
-        previous_button = ProgressButtons(
+        previous_button = IconButtons(
             icons_path / "previous_icon.svg"
         )
         previous_button.setObjectName("progress_buttons")
         previous_button.clicked.connect(self.file_tree.move_previous)
 
-        self.play_button = ProgressButtons(
+        self.play_button = IconButtons(
             icons_path / "play_icon.svg"
         )
         self.play_button.setObjectName("progress_buttons")
         self.play_button.clicked.connect(self.audio_player.toggle_playback)
 
-        next_button = ProgressButtons(
+        next_button = IconButtons(
             icons_path / "next_icon.svg"
         )
         next_button.setObjectName("progress_buttons")
