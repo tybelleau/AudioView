@@ -8,6 +8,7 @@ from waveform_widget import WaveformWidget
 from waveform_generator import WaveformGenerator
 from drag_drop import start_file_drag
 from filter_panel import FilterPanel, FilterButton
+from favorites_manager import FavoritesManager
 from pathlib import Path
 
 
@@ -15,6 +16,7 @@ from pathlib import Path
 class AudioTreeView(QTreeView):
     space_pressed = Signal(object)
     drag_request = Signal(object)
+    favorite_pressed = Signal(object)
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -72,6 +74,14 @@ class AudioTreeView(QTreeView):
         return Path(source_model.filePath(source_index))
 
     def keyPressEvent(self, event):
+
+        if event.key() == Qt.Key_F:
+            current_index = self.currentIndex()
+
+            if current_index.isValid():
+                self.favorite_pressed.emit(current_index)
+
+            return
 
         if event.key() == Qt.Key_Space:
             current_index = self.currentIndex()
@@ -162,11 +172,14 @@ class IconButtons(QPushButton):
 
 
 class MainWindow(QMainWindow):
-    def __init__(self):
+    def __init__(self, database):
         super().__init__()
 
         self.setWindowTitle("WaveMap")
         self.resize(900, 600)
+
+        self.database = database
+        self.favorites_manager = FavoritesManager(self.database)
 
         self.current_root_folder = None
         self.current_file = None
@@ -213,6 +226,17 @@ class MainWindow(QMainWindow):
     def space_pressed(self, index):
         if self.current_file is not None:
             self.audio_player.toggle_playback()
+
+    def favorite_pressed(self, index):
+        file_path = self.file_tree.get_file_path(index)
+
+        if file_path is None:
+            return
+
+        if not file_path.is_file() or not is_supported_audio(file_path):
+            return
+
+        self.favorites_manager.toggle_favorite(file_path)
 
     def file_drag_requested(self, file_path):
         self.audio_player.release_source()
@@ -512,6 +536,7 @@ class MainWindow(QMainWindow):
         filter_controls.setObjectName("filter_controls")
         self.file_tree = AudioTreeView()
         self.file_tree.space_pressed.connect(self.space_pressed)
+        self.file_tree.favorite_pressed.connect(self.favorite_pressed)
         self.file_tree.drag_request.connect(self.file_drag_requested)
 
         self.file_model = AudioFileSystemModel()
