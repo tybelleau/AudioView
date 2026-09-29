@@ -1,4 +1,4 @@
-from PySide6.QtWidgets import QHBoxLayout, QLabel, QLineEdit, QTreeView, QMainWindow, QSlider, QVBoxLayout, QWidget, QPushButton, QFileDialog, QApplication, QComboBox
+from PySide6.QtWidgets import QHBoxLayout, QLabel, QLineEdit, QMenu, QTreeView, QMainWindow, QSlider, QVBoxLayout, QWidget, QPushButton, QFileDialog, QApplication, QComboBox, QFrame, QCheckBox
 from PySide6.QtCore import Qt, QDir, Signal, QSize, QSettings, QTimer
 from PySide6.QtGui import QIcon
 from PySide6.QtMultimedia import QMediaPlayer
@@ -7,6 +7,7 @@ from audio_player import AudioPlayer
 from waveform_widget import WaveformWidget
 from waveform_generator import WaveformGenerator
 from drag_drop import start_file_drag
+from filter_panel import FilterPanel, FilterButton
 from pathlib import Path
 
 
@@ -182,6 +183,10 @@ class MainWindow(QMainWindow):
         self.waveform_generator = WaveformGenerator()
 
         self.create_ui()
+
+        self.filter_panel = FilterPanel(self)
+        self.filter_panel.filters_changed.connect(self.filters_changed)
+        self.filter_panel.active_filter_count_changed.connect(self.update_filter_count)
 
         self.audio_player.player.playbackStateChanged.connect(self.playback_state_changed)
         self.audio_player.player.positionChanged.connect(self.position_changed)
@@ -405,6 +410,73 @@ class MainWindow(QMainWindow):
 
         self.search_bar.setCurrentText(search)
 
+    def show_file_type_menu(self):
+        popup = QFrame(self, Qt.Popup)
+        popup.setObjectName("filter_popup")
+
+        layout = QVBoxLayout(popup)
+        layout.setContentsMargins(10, 8, 10, 8)
+        layout.setSpacing(4)
+
+        file_types = {
+            "WAV": ".wav",
+            "MP3": ".mp3",
+            "AAC": ".aac",
+            "M4A": ".m4a",
+        }
+
+        for name, extension in file_types.items():
+            checkbox = QCheckBox(name)
+            checkbox.setChecked(
+                extension in self.audio_filter_model.file_types
+            )
+
+            checkbox.toggled.connect(
+                lambda checked, ext=extension:
+                    self.update_file_type_filter(ext, checked)
+            )
+
+            layout.addWidget(checkbox)
+
+        position = self.file_type_button.mapToGlobal(
+            self.file_type_button.rect().bottomLeft()
+        )
+
+        popup.move(position)
+        popup.adjustSize()
+        popup.show()
+
+    def update_file_type_filter(self, extension, checked):
+        file_types = set(self.audio_filter_model.file_types)
+
+        if checked:
+            file_types.add(extension)
+        else:
+            file_types.discard(extension)
+
+        self.audio_filter_model.set_file_types(file_types)
+
+    def show_filter_panel(self):
+        position = self.filter_button.mapToGlobal(
+            self.filter_button.rect().center()
+        )
+
+        self.filter_panel.adjustSize()
+
+        panel_x = position.x() - (self.filter_panel.width() // 2)
+        panel_y = position.y() - (self.filter_panel.height() // 2)
+
+        self.filter_panel.move(panel_x, panel_y)
+        self.filter_panel.show()
+
+    def filters_changed(self, filters):
+        self.audio_filter_model.set_file_types(
+            filters["file_type"]
+        )
+
+    def update_filter_count(self, count):
+        self.filter_button.set_filter_count(count)
+
 
     def create_ui(self):
 
@@ -436,6 +508,8 @@ class MainWindow(QMainWindow):
         self.folder_header.setObjectName("folder_header")
         search_bar_container = QWidget()
         search_bar_container.setObjectName("search_bar_container")
+        filter_controls = QWidget()
+        filter_controls.setObjectName("filter_controls")
         self.file_tree = AudioTreeView()
         self.file_tree.space_pressed.connect(self.space_pressed)
         self.file_tree.drag_request.connect(self.file_drag_requested)
@@ -462,19 +536,27 @@ class MainWindow(QMainWindow):
         file_section_layout.addSpacing(25)
         file_section_layout.addWidget(self.folder_header)
         file_section_layout.addWidget(search_bar_container)
+        file_section_layout.addWidget(filter_controls)
         file_section_layout.addWidget(self.file_tree)
 
 
         # search bar container layout
-        search_bar_container_layout = QVBoxLayout()
+        search_bar_container_layout = QHBoxLayout()
+        search_bar_container_layout.setSpacing(6)
         search_bar_container.setLayout(search_bar_container_layout)
 
         self.search_bar = QComboBox()
         self.search_bar.setObjectName("search_bar")
         self.search_bar.setEditable(True)
         self.search_bar.setInsertPolicy(QComboBox.NoInsert)
+        self.filter_button = FilterButton()
+        self.filter_button.setText("☷")
+        self.filter_button.setObjectName("filter_button")
+        self.filter_button.setFixedWidth(32)
+        self.filter_button.clicked.connect(self.show_filter_panel)
 
         search_bar_container_layout.addWidget(self.search_bar)
+        search_bar_container_layout.addWidget(self.filter_button)
 
         self.search_bar.lineEdit().textChanged.connect(self.search_changed)
         self.load_recent_searches()
