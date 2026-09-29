@@ -88,6 +88,7 @@ class AudioFilterModel(QSortFilterProxyModel):
         self.search_root = None
         self.search_index = None
         self.matching_files = set()
+        self.file_types = set()
 
         # Keep parent folders visible when a child matches.
         self.setRecursiveFilteringEnabled(True)
@@ -108,6 +109,14 @@ class AudioFilterModel(QSortFilterProxyModel):
         self.search_index = search_index
         self.invalidateFilter()
 
+    def set_file_types(self, file_types):
+        self.file_types = {
+            file_type.lower()
+            for file_type in file_types
+        }
+
+        self.invalidateFilter()
+
     def set_search_root(self, folder_path):
         self.search_root = Path(folder_path)
         self.invalidateFilter()
@@ -123,7 +132,7 @@ class AudioFilterModel(QSortFilterProxyModel):
 
         path = Path(source_model.filePath(index))
 
-        # Never filter out the selected library root.
+        # Keep the selected library root visible.
         if self.search_root and path == self.search_root:
             return True
 
@@ -134,26 +143,28 @@ class AudioFilterModel(QSortFilterProxyModel):
             except ValueError:
                 return False
 
+        # Only allow supported audio files and folders.
         if path.is_file():
             if not is_supported_audio(path):
                 return False
 
-        elif path.is_dir():
-            pass
-
-        else:
+        elif not path.is_dir():
             return False
 
-        if not self.search_text:
-            return True
+        # Apply file type filtering.
+        if path.is_file() and self.file_types:
+            if path.suffix.lower() not in self.file_types:
+                return False
 
-        if path.is_file():
-            return path in self.matching_files
+        # Apply search filtering.
+        if self.search_text:
+            if path.is_file():
+                return path in self.matching_files
 
-        if path.is_dir():
-            return any(
-                match_path.is_relative_to(path)
-                for match_path in self.matching_files
-            )
+            if path.is_dir():
+                return any(
+                    match_path.is_relative_to(path)
+                    for match_path in self.matching_files
+                )
 
-        return False
+        return True
