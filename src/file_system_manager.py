@@ -7,7 +7,10 @@ SUPPORTED_EXTENSIONS = {
     ".wav",
     ".mp3",
     ".aac",
-    ".m4a"
+    ".m4a",
+    ".ogg",
+    ".flac",
+    ".opus",
 }
 
 def is_supported_audio(file_path):
