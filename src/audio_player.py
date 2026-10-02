@@ -15,9 +15,6 @@ class AudioPlayer(QObject):
         self.player.setSource(file_path)
         self.player.play()
 
-    def stop(self):
-        self.player.stop()
-
     def release_source(self):
         self.player.stop()
         self.player.setSource(QUrl())
