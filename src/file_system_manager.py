@@ -1,4 +1,5 @@
 from pathlib import Path
+from sys import _enablelegacywindowsfsencoding
 from PySide6.QtCore import QSortFilterProxyModel, Qt
 from PySide6.QtGui import QIcon
 from PySide6.QtWidgets import QFileSystemModel
@@ -60,13 +61,25 @@ class AudioSearchIndex:
     
 
 class AudioFileSystemModel(QFileSystemModel):
-    def __init__(self):
+    def __init__(self, favorites_manager=None):
         super().__init__()
 
         icons_path = Path(__file__).resolve().parent.parent / "assets" / "icons"
 
         self.folder_icon = QIcon(str(icons_path / "folder_icon.svg"))
         self.audio_icon = QIcon(str(icons_path / "audio_icon.svg"))
+        self.gold_audio_icon = QIcon(str(icons_path / "favorite_audio_icon.svg"))
+
+        self.favorites_manager = favorites_manager
+        self.favorite_paths = set()
+
+        self.refresh_favorites()
+
+    def refresh_favorites(self):
+        if self.favorites_manager:
+            self.favorite_paths = self.favorites_manager.get_favorites()
+        else:
+            self.favorite_paths = set()
 
     def data(self, index, role=Qt.DisplayRole):
         if role == Qt.DecorationRole:
@@ -76,6 +89,9 @@ class AudioFileSystemModel(QFileSystemModel):
                 return self.folder_icon
 
             if is_supported_audio(path):
+                if path in self.favorite_paths:
+                    return self.gold_audio_icon
+
                 return self.audio_icon
 
         return super().data(index, role)
@@ -89,6 +105,7 @@ class AudioFilterModel(QSortFilterProxyModel):
         self.search_index = None
         self.matching_files = set()
         self.file_types = set()
+        self.favorites_only = False
 
         # Keep parent folders visible when a child matches.
         self.setRecursiveFilteringEnabled(True)
@@ -115,6 +132,10 @@ class AudioFilterModel(QSortFilterProxyModel):
             for file_type in file_types
         }
 
+        self.invalidateFilter()
+
+    def set_favorites_only(self, enabled):
+        self.favorites_only = enabled
         self.invalidateFilter()
 
     def set_search_root(self, folder_path):
@@ -155,6 +176,38 @@ class AudioFilterModel(QSortFilterProxyModel):
         if path.is_file() and self.file_types:
             if path.suffix.lower() not in self.file_types:
                 return False
+
+        # Apply favorites filtering.
+        if self.favorites_only:
+            if path.is_file():
+                if path not in source_model.favorite_paths:
+                    return False
+
+            elif path.is_dir():
+                matching_favorites = [
+                    favorite_path
+                    for favorite_path in source_model.favorite_paths
+                    if favorite_path.is_relative_to(path)
+                ]
+
+                # Apply the other active filters to favorites
+                # before deciding whether this folder should remain visible.
+                if self.file_types:
+                    matching_favorites = [
+                        favorite_path
+                        for favorite_path in matching_favorites
+                        if favorite_path.suffix.lower() in self.file_types
+                    ]
+
+                if self.search_text:
+                    matching_favorites = [
+                        favorite_path
+                        for favorite_path in matching_favorites
+                        if favorite_path in self.matching_files
+                    ]
+
+                if not matching_favorites:
+                    return False
 
         # Apply search filtering.
         if self.search_text:

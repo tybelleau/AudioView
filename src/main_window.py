@@ -8,6 +8,7 @@ from waveform_widget import WaveformWidget
 from waveform_generator import WaveformGenerator
 from drag_drop import start_file_drag
 from filter_panel import FilterPanel, FilterButton
+from favorites_manager import FavoritesManager
 from pathlib import Path
 
 
@@ -15,6 +16,7 @@ from pathlib import Path
 class AudioTreeView(QTreeView):
     space_pressed = Signal(object)
     drag_request = Signal(object)
+    favorite_pressed = Signal(object)
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -72,6 +74,14 @@ class AudioTreeView(QTreeView):
         return Path(source_model.filePath(source_index))
 
     def keyPressEvent(self, event):
+
+        if event.key() == Qt.Key_F:
+            current_index = self.currentIndex()
+
+            if current_index.isValid():
+                self.favorite_pressed.emit(current_index)
+
+            return
 
         if event.key() == Qt.Key_Space:
             current_index = self.currentIndex()
@@ -162,11 +172,14 @@ class IconButtons(QPushButton):
 
 
 class MainWindow(QMainWindow):
-    def __init__(self):
+    def __init__(self, database):
         super().__init__()
 
         self.setWindowTitle("WaveMap")
         self.resize(900, 600)
+
+        self.database = database
+        self.favorites_manager = FavoritesManager(self.database)
 
         self.current_root_folder = None
         self.current_file = None
@@ -213,6 +226,30 @@ class MainWindow(QMainWindow):
     def space_pressed(self, index):
         if self.current_file is not None:
             self.audio_player.toggle_playback()
+
+    def favorite_pressed(self, index):
+        file_path = self.file_tree.get_file_path(index)
+
+        if file_path is None:
+            return
+
+        if not file_path.is_file() or not is_supported_audio(file_path):
+            return
+
+        self.favorites_manager.toggle_favorite(file_path)
+
+        self.file_model.refresh_favorites()
+        self.audio_filter_model.invalidateFilter()
+        if self.audio_filter_model.favorites_only:
+            self.expand_visible_results()
+
+        source_index = self.file_model.index(str(file_path))
+
+        self.file_model.dataChanged.emit(
+            source_index,
+            source_index,
+            [Qt.ItemDataRole.DecorationRole]
+        )
 
     def file_drag_requested(self, file_path):
         self.audio_player.release_source()
@@ -263,6 +300,10 @@ class MainWindow(QMainWindow):
         # empty search = normal browsing mode.
         if not text:
             self.file_tree.collapseAll()
+
+            if self.audio_filter_model.favorites_only:
+                self.expand_favorite_paths()
+
             return
 
         # keep tree rooted at selected library
@@ -278,9 +319,9 @@ class MainWindow(QMainWindow):
             self.file_tree.setRootIndex(proxy_index)
 
         # expand paths containing matches
-        self.expand_search_results()
+        self.expand_visible_results()
 
-    def expand_search_results(self):
+    def expand_visible_results(self):
         root_index = self.file_tree.rootIndex()
 
         def expand_children(parent_index):
@@ -298,6 +339,27 @@ class MainWindow(QMainWindow):
                     expand_children(index)
 
         expand_children(root_index)
+
+    def expand_favorite_paths(self):
+        for favorite_path in self.file_model.favorite_paths:
+            source_index = self.file_model.index(
+                str(favorite_path)
+            )
+
+            if not source_index.isValid():
+                continue
+
+            source_parent = source_index.parent()
+
+            while source_parent.isValid():
+                proxy_index = self.audio_filter_model.mapFromSource(
+                    source_parent
+                )
+
+                if proxy_index.isValid():
+                    self.file_tree.expand(proxy_index)
+
+                source_parent = source_parent.parent()
 
     def file_selected(self, current_index, previous_index):
         self.current_index = current_index
@@ -474,6 +536,15 @@ class MainWindow(QMainWindow):
             filters["file_type"]
         )
 
+        favorites_only = bool(filters["favorites"])
+
+        self.audio_filter_model.set_favorites_only(
+            favorites_only
+        )
+
+        if favorites_only:
+            self.expand_favorite_paths()
+
     def update_filter_count(self, count):
         self.filter_button.set_filter_count(count)
 
@@ -512,9 +583,10 @@ class MainWindow(QMainWindow):
         filter_controls.setObjectName("filter_controls")
         self.file_tree = AudioTreeView()
         self.file_tree.space_pressed.connect(self.space_pressed)
+        self.file_tree.favorite_pressed.connect(self.favorite_pressed)
         self.file_tree.drag_request.connect(self.file_drag_requested)
 
-        self.file_model = AudioFileSystemModel()
+        self.file_model = AudioFileSystemModel(self.favorites_manager)
         self.audio_filter_model = AudioFilterModel()
         self.audio_filter_model.setSourceModel(self.file_model)
         self.audio_filter_model.set_search_index(self.search_index)
