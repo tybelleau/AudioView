@@ -1,4 +1,3 @@
-from multiprocessing import Value
 from PySide6.QtCore import Qt, Signal, QSize
 from PySide6.QtWidgets import QFrame, QVBoxLayout, QHBoxLayout, QLabel, QCheckBox, QPushButton
 from PySide6.QtGui import QIcon

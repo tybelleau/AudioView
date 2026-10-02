@@ -1,5 +1,4 @@
 from pathlib import Path
-from sys import _enablelegacywindowsfsencoding
 from PySide6.QtCore import QSortFilterProxyModel, Qt
 from PySide6.QtGui import QIcon
 from PySide6.QtWidgets import QFileSystemModel
@@ -8,21 +7,14 @@ SUPPORTED_EXTENSIONS = {
     ".wav",
     ".mp3",
     ".aac",
-    ".m4a"
+    ".m4a",
+    ".ogg",
+    ".flac",
+    ".opus",
 }
 
 def is_supported_audio(file_path):
     return file_path.suffix.lower() in SUPPORTED_EXTENSIONS
-
-def folder_contains_audio(folder_path):
-    try:
-        for path in folder_path.rglob("*"):
-            if path.is_file() and is_supported_audio(path):
-                return True
-    except OSError:
-        return False
-
-    return False
 
 def get_audio_files(folder_path):
     audio_files = []
@@ -53,11 +45,6 @@ class AudioSearchIndex:
             for path in self.audio_files
             if text in path.name.lower()
         }
-
-    def clear(self):
-        self.root_folder = None
-        self.audio_files = []
-
     
 
 class AudioFileSystemModel(QFileSystemModel):
