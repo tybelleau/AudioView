@@ -1,4 +1,4 @@
-from PySide6.QtWidgets import QHBoxLayout, QLabel, QLineEdit, QMenu, QTreeView, QMainWindow, QSlider, QVBoxLayout, QWidget, QPushButton, QFileDialog, QApplication, QComboBox, QFrame, QCheckBox
+from PySide6.QtWidgets import QHBoxLayout, QLabel, QTreeView, QMainWindow, QSlider, QVBoxLayout, QWidget, QPushButton, QFileDialog, QApplication, QComboBox
 from PySide6.QtCore import Qt, QDir, Signal, QSize, QSettings, QTimer
 from PySide6.QtGui import QIcon
 from PySide6.QtMultimedia import QMediaPlayer
@@ -204,7 +204,6 @@ class MainWindow(QMainWindow):
         self.audio_player.player.playbackStateChanged.connect(self.playback_state_changed)
         self.audio_player.player.positionChanged.connect(self.position_changed)
         self.audio_player.player.durationChanged.connect(self.duration_changed)
-        self.audio_player.player.mediaStatusChanged.connect(self.media_status_changed)
         self.waveform_generator.waveform_ready.connect(self.waveform_ready)
 
     def playback_state_changed(self, state):
@@ -411,9 +410,6 @@ class MainWindow(QMainWindow):
         self.audio_player.seek(position)
         self.file_tree.setFocus()
 
-    def media_status_changed(self, status):
-        print("Media status:", status)
-
     def format_time(self, milliseconds):
         total_seconds = milliseconds // 1000
 
@@ -471,52 +467,6 @@ class MainWindow(QMainWindow):
             self.search_bar.addItem(item)
 
         self.search_bar.setCurrentText(search)
-
-    def show_file_type_menu(self):
-        popup = QFrame(self, Qt.Popup)
-        popup.setObjectName("filter_popup")
-
-        layout = QVBoxLayout(popup)
-        layout.setContentsMargins(10, 8, 10, 8)
-        layout.setSpacing(4)
-
-        file_types = {
-            "WAV": ".wav",
-            "MP3": ".mp3",
-            "AAC": ".aac",
-            "M4A": ".m4a",
-        }
-
-        for name, extension in file_types.items():
-            checkbox = QCheckBox(name)
-            checkbox.setChecked(
-                extension in self.audio_filter_model.file_types
-            )
-
-            checkbox.toggled.connect(
-                lambda checked, ext=extension:
-                    self.update_file_type_filter(ext, checked)
-            )
-
-            layout.addWidget(checkbox)
-
-        position = self.file_type_button.mapToGlobal(
-            self.file_type_button.rect().bottomLeft()
-        )
-
-        popup.move(position)
-        popup.adjustSize()
-        popup.show()
-
-    def update_file_type_filter(self, extension, checked):
-        file_types = set(self.audio_filter_model.file_types)
-
-        if checked:
-            file_types.add(extension)
-        else:
-            file_types.discard(extension)
-
-        self.audio_filter_model.set_file_types(file_types)
 
     def show_filter_panel(self):
         position = self.filter_button.mapToGlobal(

@@ -1,1 +1,1 @@
-"""AudioView application package"""
+"""WaveMap application package"""
