@@ -1,4 +1,4 @@
-
+from pathlib import Path
 
 class FavoritesManager:
     def __init__(self, database):
@@ -39,3 +39,12 @@ class FavoritesManager:
             self.remove_favorite(file_path)
         else:
             self.add_favorite(file_path)
+
+    def get_favorites(self):
+        cursor = self.database.connection.cursor()
+        cursor.execute("SELECT file_path FROM favorites")
+
+        return {
+            Path(row[0])
+            for row in cursor.fetchall()
+        }

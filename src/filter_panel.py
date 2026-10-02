@@ -1,3 +1,4 @@
+from multiprocessing import Value
 from PySide6.QtCore import Qt, Signal, QSize
 from PySide6.QtWidgets import QFrame, QVBoxLayout, QHBoxLayout, QLabel, QCheckBox, QPushButton
 from PySide6.QtGui import QIcon
@@ -126,6 +127,16 @@ class FilterPanel(QFrame):
             }
         )
 
+        self.create_separator()
+
+        self.create_filter_section(
+            "Favorites",
+            "favorites",
+            {
+                "Favorites": True,
+            }
+        )
+
         self.create_clear_button()
 
     def create_filter_section(self, title_text, filter_key, options):
@@ -159,19 +170,25 @@ class FilterPanel(QFrame):
 
     def emit_filters_changed(self):
         active_filters = {
-            "file_type": [
-                extension
-                for extension, checkbox
-                in self.filters["file_type"].items()
-                if checkbox.isChecked()
-            ],
-            "length": [
-                value
-                for value, checkbox
-                in self.filters["length"].items()
-                if checkbox.isChecked()
-            ],
-        }
+        "file_type": [
+            extension
+            for extension, checkbox
+            in self.filters["file_type"].items()
+            if checkbox.isChecked()
+        ],
+        "length": [
+            value
+            for value, checkbox
+            in self.filters["length"].items()
+            if checkbox.isChecked()
+        ],
+        "favorites": [
+            value
+            for value, checkbox
+            in self.filters["favorites"].items()
+            if checkbox.isChecked()
+        ],
+    }
 
         count = sum(
             checkbox.isChecked()
