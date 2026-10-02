@@ -15,7 +15,6 @@ class Database:
         app_data_path.mkdir(parents=True, exist_ok=True)
 
         self.db_path = app_data_path / "wavemap.db"
-        print(self.db_path)
 
         self.connection = sqlite3.connect(self.db_path)
 
