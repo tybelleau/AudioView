@@ -18,6 +18,7 @@ class AudioTreeView(QTreeView):
     drag_request = Signal(object)
     favorite_pressed = Signal(object)
     loop_pressed = Signal()
+    metadata_pressed = Signal()
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -75,6 +76,9 @@ class AudioTreeView(QTreeView):
         return Path(source_model.filePath(source_index))
 
     def keyPressEvent(self, event):
+        if event.key() == Qt.Key_M:
+            self.metadata_pressed.emit()
+            return
 
         if event.key() == Qt.Key_L:
             self.loop_pressed.emit()
@@ -627,6 +631,7 @@ class MainWindow(QMainWindow):
         self.metadata_button = QPushButton("Metadata")
         self.metadata_button.setObjectName("tool_buttons")
         self.metadata_button.setCheckable(True)
+        self.file_tree.metadata_pressed.connect(self.metadata_button.toggle)
         self.loop_button = QPushButton("Loop")
         self.loop_button.setObjectName("tool_buttons")
         self.loop_button.setCheckable(True)
