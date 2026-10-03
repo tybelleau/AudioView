@@ -32,5 +32,11 @@ class AudioPlayer(QObject):
             self.player.setPosition(0)
             self.player.play()
 
+    def set_looping(self, enabled):
+        if enabled:
+            self.player.setLoops(QMediaPlayer.Loops.Infinite)
+        else:
+            self.player.setLoops(QMediaPlayer.Loops.Once)
+
     def seek(self, position):
         self.player.setPosition(position)
