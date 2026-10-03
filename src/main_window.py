@@ -17,6 +17,7 @@ class AudioTreeView(QTreeView):
     space_pressed = Signal(object)
     drag_request = Signal(object)
     favorite_pressed = Signal(object)
+    loop_pressed = Signal()
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -74,6 +75,10 @@ class AudioTreeView(QTreeView):
         return Path(source_model.filePath(source_index))
 
     def keyPressEvent(self, event):
+
+        if event.key() == Qt.Key_L:
+            self.loop_pressed.emit()
+            return
 
         if event.key() == Qt.Key_F:
             current_index = self.currentIndex()
@@ -532,6 +537,8 @@ class MainWindow(QMainWindow):
         filter_controls = QWidget()
         filter_controls.setObjectName("filter_controls")
         self.file_tree = AudioTreeView()
+
+        # Keyboard Shortcuts
         self.file_tree.space_pressed.connect(self.space_pressed)
         self.file_tree.favorite_pressed.connect(self.favorite_pressed)
         self.file_tree.drag_request.connect(self.file_drag_requested)
@@ -623,6 +630,8 @@ class MainWindow(QMainWindow):
         self.loop_button = QPushButton("Loop")
         self.loop_button.setObjectName("tool_buttons")
         self.loop_button.setCheckable(True)
+        self.loop_button.toggled.connect(self.audio_player.set_looping)
+        self.file_tree.loop_pressed.connect(self.loop_button.toggle)
         self.options_button = QPushButton("Options")
         self.options_button.setObjectName("tool_buttons")
 
