@@ -1,5 +1,5 @@
 from PySide6.QtCore import Qt, Signal, QSize
-from PySide6.QtWidgets import QFrame, QVBoxLayout, QHBoxLayout, QLabel, QCheckBox, QPushButton
+from PySide6.QtWidgets import QFrame, QVBoxLayout, QHBoxLayout, QLabel, QCheckBox, QPushButton, QGridLayout
 from PySide6.QtGui import QIcon
 
 class FilterButton(QPushButton):
@@ -110,6 +110,9 @@ class FilterPanel(QFrame):
                 "MP3": ".mp3",
                 "M4A": ".m4a",
                 "AAC": ".aac",
+                "OGG": ".ogg",
+                "FLAC": ".flac",
+                "OPUS": ".opus",
             }
         )
 
@@ -143,12 +146,15 @@ class FilterPanel(QFrame):
         title.setObjectName("filter_section_title")
         self.layout.addWidget(title)
 
-        row = QHBoxLayout()
-        row.setSpacing(15)
+        grid = QGridLayout()
+        grid.setHorizontalSpacing(15)
+        grid.setVerticalSpacing(8)
 
         self.filters[filter_key] = {}
 
-        for name, value in options.items():
+        columns = 4
+
+        for index, (name, value) in enumerate(options.items()):
             checkbox = QCheckBox(name)
 
             checkbox.toggled.connect(
@@ -156,9 +162,11 @@ class FilterPanel(QFrame):
             )
 
             self.filters[filter_key][value] = checkbox
-            row.addWidget(checkbox)
+            row_index = index // columns
+            column_index = index % columns
+            grid.addWidget(checkbox, row_index, column_index)
 
-        self.layout.addLayout(row)
+        self.layout.addLayout(grid)
 
     def create_separator(self):
         separator = QFrame()
