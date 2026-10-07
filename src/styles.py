@@ -82,6 +82,12 @@ QPushButton#tool_buttons:checked {
 }
 
 
+QFrame#metadata_panel {
+    background-color: #2B2B2B;
+    border-radius: 4px;
+}
+
+
 QPushButton#progress_buttons {
     background: transparent;
     border: none;
