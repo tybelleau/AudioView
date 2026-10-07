@@ -4,6 +4,7 @@ from PySide6.QtMultimedia import QAudioDecoder, QAudioFormat
 
 class WaveformGenerator(QObject):
     waveform_ready = Signal(list)
+    format_ready = Signal(int, int)
     TARGET_POINTS = 1200
 
     def __init__(self):
@@ -11,6 +12,7 @@ class WaveformGenerator(QObject):
 
         self.decoder = QAudioDecoder()
         self.samples = []
+        self.format_sent = False
 
         self.decoder.bufferReady.connect(
             self.process_buffer
@@ -22,6 +24,7 @@ class WaveformGenerator(QObject):
 
     def generate(self, file_path):
         self.samples.clear()
+        self.format_sent = False
 
         self.decoder.stop()
         self.decoder.setSource(QUrl.fromLocalFile(file_path))
@@ -35,6 +38,10 @@ class WaveformGenerator(QObject):
                 continue
 
             audio_format = buffer.format()
+
+            if not self.format_sent:
+                self.format_sent = True
+                self.format_ready.emit(audio_format.sampleRate(),audio_format.channelCount())
             sample_format = audio_format.sampleFormat()
             channel_count = audio_format.channelCount()
 

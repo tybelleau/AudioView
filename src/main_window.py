@@ -1,7 +1,7 @@
 from PySide6.QtWidgets import QHBoxLayout, QLabel, QTreeView, QMainWindow, QSlider, QVBoxLayout, QWidget, QPushButton, QFileDialog, QApplication, QComboBox
 from PySide6.QtCore import Qt, QDir, Signal, QSize, QSettings, QTimer
 from PySide6.QtGui import QIcon
-from PySide6.QtMultimedia import QMediaPlayer
+from PySide6.QtMultimedia import QMediaPlayer, QMediaMetaData
 from file_system_manager import AudioFilterModel, is_supported_audio, AudioFileSystemModel, AudioSearchIndex
 from audio_player import AudioPlayer
 from waveform_widget import WaveformWidget
@@ -9,6 +9,7 @@ from waveform_generator import WaveformGenerator
 from drag_drop import start_file_drag
 from filter_panel import FilterPanel, FilterButton
 from favorites_manager import FavoritesManager
+from metadata_panel import MetadataPanel
 from pathlib import Path
 
 
@@ -18,6 +19,7 @@ class AudioTreeView(QTreeView):
     drag_request = Signal(object)
     favorite_pressed = Signal(object)
     loop_pressed = Signal()
+    metadata_pressed = Signal()
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -75,6 +77,9 @@ class AudioTreeView(QTreeView):
         return Path(source_model.filePath(source_index))
 
     def keyPressEvent(self, event):
+        if event.key() == Qt.Key_M:
+            self.metadata_pressed.emit()
+            return
 
         if event.key() == Qt.Key_L:
             self.loop_pressed.emit()
@@ -209,7 +214,9 @@ class MainWindow(QMainWindow):
         self.audio_player.player.playbackStateChanged.connect(self.playback_state_changed)
         self.audio_player.player.positionChanged.connect(self.position_changed)
         self.audio_player.player.durationChanged.connect(self.duration_changed)
+        self.audio_player.player.metaDataChanged.connect(self.metadata_changed)
         self.waveform_generator.waveform_ready.connect(self.waveform_ready)
+        self.waveform_generator.format_ready.connect(self.audio_format_ready)
 
     def playback_state_changed(self, state):
         if state == QMediaPlayer.PlaybackState.PlayingState:
@@ -381,9 +388,12 @@ class MainWindow(QMainWindow):
             self.waveform_widget.set_playback_position(0, 0)
             self.audio_player.play_file(file_path)
             self.waveform_generator.generate(file_path)
+            self.metadata_panel.show_file(file_path)
+            self.metadata_changed()
         else:
             self.current_file = None
             self.file_name.setText("No file selected")
+            self.metadata_panel.clear()
 
     # Makes the progress slider advance with the audio
     def position_changed(self, position):
@@ -410,6 +420,47 @@ class MainWindow(QMainWindow):
         self.time_label.setText(
                     f"{self.format_time(position)} / {self.format_time(duration)}"
                 )
+
+        if duration > 0:
+            self.metadata_panel.set_value("Duration", self.format_time(duration))
+
+    def audio_format_ready(self, sample_rate, channel_count):
+        if sample_rate > 0:
+            rate_text = f"{sample_rate} Hz"
+        else:
+            rate_text = "--"
+
+        self.metadata_panel.set_value("Sample Rate", rate_text)
+
+        if channel_count == 1:
+            channel_text = "Mono"
+        elif channel_count == 2:
+            channel_text = "Stereo"
+        elif channel_count > 2:
+            channel_text = str(channel_count)
+        else:
+            channel_text = "--"
+
+        self.metadata_panel.set_value("Channels", channel_text)
+
+    def metadata_changed(self):
+        meta = self.audio_player.player.metaData()
+
+        self.metadata_panel.set_value(
+            "Bit Rate",
+            self.format_bitrate(meta.value(QMediaMetaData.Key.AudioBitRate))
+        )
+
+    def format_bitrate(self, bitrate):
+        try:
+            bits_per_second = int(bitrate)
+        except (TypeError, ValueError):
+            return "--"
+
+        if bits_per_second <= 0:
+            return "--"
+
+        return f"{round(bits_per_second / 1000)} kbps"
 
     def seek_audio(self, position):
         self.audio_player.seek(position)
@@ -613,8 +664,10 @@ class MainWindow(QMainWindow):
         play_section = QWidget()
         view_section = QWidget()
         tool_section = QWidget()
+        self.metadata_panel = MetadataPanel()
 
-        view_play_section_layout.addWidget(tool_section, 1)
+        view_play_section_layout.addWidget(tool_section)
+        view_play_section_layout.addWidget(self.metadata_panel)
         view_play_section_layout.addWidget(view_section, 9, alignment=Qt.AlignCenter)
         view_play_section_layout.addWidget(play_section, 1)
 
@@ -627,6 +680,8 @@ class MainWindow(QMainWindow):
         self.metadata_button = QPushButton("Metadata")
         self.metadata_button.setObjectName("tool_buttons")
         self.metadata_button.setCheckable(True)
+        self.metadata_button.toggled.connect(self.metadata_panel.setVisible)
+        self.file_tree.metadata_pressed.connect(self.metadata_button.toggle)
         self.loop_button = QPushButton("Loop")
         self.loop_button.setObjectName("tool_buttons")
         self.loop_button.setCheckable(True)
